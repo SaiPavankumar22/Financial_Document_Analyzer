@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from crewai.tools import BaseTool, tool
 from crewai_tools import SerperDevTool
+from langchain_community.document_loaders import PyPDFLoader
 
 load_dotenv()
 
@@ -40,7 +41,7 @@ class FinancialDocumentTool(BaseTool):
             str: Extracted and cleaned text content from the financial document.
         """
         try:
-            from langchain_community.document_loaders import PyPDFLoader
+            
             docs = PyPDFLoader(file_path=path).load()
 
             full_report = ""
