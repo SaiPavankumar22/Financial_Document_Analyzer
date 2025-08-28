@@ -21,7 +21,7 @@ class FinancialDocumentInput(BaseModel):
     )
 
 ## Creating custom pdf reader tool
-class _FinancialDocumentTool(BaseTool):
+class FinancialDocumentTool(BaseTool):
     name: str = "Financial Document Reader"
     description: str = (
         "Reads financial PDF reports and extracts clean, structured text. "
@@ -40,8 +40,8 @@ class _FinancialDocumentTool(BaseTool):
             str: Extracted and cleaned text content from the financial document.
         """
         try:
-            from langchain.document_loaders import PyPDFLoader as Pdf
-            docs = Pdf(file_path=path).load()
+            from langchain_community.document_loaders import PyPDFLoader
+            docs = PyPDFLoader(file_path=path).load()
 
             full_report = ""
             for data in docs:
@@ -134,13 +134,3 @@ def create_risk_assessment_tool(financial_document_data: str) -> str:
         "Note: Replace placeholders with actual computed risk analysis."
     ]
     return "\n".join(risk_report)
-
-
-class FinancialDocumentTool:
-    """Wrapper for compatibility with existing code expecting FinancialDocumentTool.read_data_tool."""
-
-    @staticmethod
-    def read_data_tool(path: str = 'data/sample.pdf') -> str:
-        """Static wrapper method to read financial documents cleanly."""
-        tool_instance = _FinancialDocumentTool()
-        return tool_instance._run(path)

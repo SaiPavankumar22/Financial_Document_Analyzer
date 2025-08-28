@@ -3,7 +3,11 @@ from crewai import Task
 from agents import financial_analyst, document_verifier, investment_advisor, risk_assessor
 from tools import search_tool, FinancialDocumentTool
 
+# Instantiate tools
+financial_document_tool = FinancialDocumentTool()
+search = search_tool
 
+# Document Verification Task
 verification = Task(
     description="""
     You are responsible for verifying the authenticity and quality of financial documents provided for analysis: {query}.
@@ -17,6 +21,8 @@ verification = Task(
     6. Confirm whether documents are ready for downstream analysis
     
     Be highly systematic, precise, and transparent in your verification.
+    
+    Use the document text provided: {document_text}
     """,
     expected_output="""
     A structured **Document Verification Report** containing:
@@ -29,14 +35,16 @@ verification = Task(
     - Data packaged in a format ready for analysis
     """,
     agent=document_verifier,
-    tools=[FinancialDocumentTool.read_data_tool],
+    tools=[financial_document_tool],
     async_execution=False,
 )
 
-## Creating a task to help solve user's query
+# Financial Analysis Task
 analyze_financial_document = Task(
     description="""
     You are a senior financial analyst. Analyze the provided financial documents to answer the user's query: {query}.
+    
+    Use the document text provided: {document_text}
     
     Your job:
     1. Extract and interpret key metrics (revenue, margins, liquidity, leverage ratios)
@@ -58,12 +66,12 @@ analyze_financial_document = Task(
     - Explicit list of assumptions and limitations
     """,
     agent=financial_analyst,
-    tools=[FinancialDocumentTool.read_data_tool, search_tool],
+    tools=[financial_document_tool, search],
     context=[verification],
     async_execution=False,
 )
 
-## Creating an investment analysis task
+# Investment Analysis Task
 investment_analysis = Task(
     description="""
     You are an experienced investment advisor. Based on the financial analysis, provide actionable investment recommendations for: {query}.
@@ -92,12 +100,12 @@ investment_analysis = Task(
     - Key external factors to monitor
     """,
     agent=investment_advisor,
-    tools=[search_tool],
+    tools=[search],
     context=[analyze_financial_document],
     async_execution=False,
 )
 
-## Creating a risk assessment task
+# Risk Assessment Task
 risk_assessment = Task(
     description="""
     You are a financial risk and compliance specialist. Perform a comprehensive risk assessment of the financial analysis and investment recommendations for: {query}.
@@ -123,7 +131,7 @@ risk_assessment = Task(
     - Overall risk-adjusted investment perspective
     """,
     agent=risk_assessor,
-    tools=[search_tool, FinancialDocumentTool.read_data_tool],
+    tools=[search, financial_document_tool],
     context=[analyze_financial_document, investment_analysis],
     async_execution=False,
 )
