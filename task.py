@@ -1,82 +1,129 @@
 ## Importing libraries and files
 from crewai import Task
-
-from agents import financial_analyst, verifier
+from agents import financial_analyst, document_verifier, investment_advisor, risk_assessor
 from tools import search_tool, FinancialDocumentTool
+
+
+verification = Task(
+    description="""
+    You are responsible for verifying the authenticity and quality of financial documents provided for analysis: {query}.
+    
+    Your job:
+    1. Identify the type of documents (10-K, 10-Q, annual report, etc.)
+    2. Check document integrity and authenticity
+    3. Extract and organize all key financial data
+    4. Cross-check figures across documents for consistency
+    5. Flag any missing, incomplete, or suspicious data
+    6. Confirm whether documents are ready for downstream analysis
+    
+    Be highly systematic, precise, and transparent in your verification.
+    """,
+    expected_output="""
+    A structured **Document Verification Report** containing:
+    - Document classification (type, year, source)
+    - Extracted financial metrics summary
+    - Data consistency check results
+    - Missing or incomplete data list
+    - Reliability rating of documents
+    - Recommendations for additional docs if needed
+    - Data packaged in a format ready for analysis
+    """,
+    agent=document_verifier,
+    tools=[FinancialDocumentTool.read_data_tool],
+    async_execution=False,
+)
 
 ## Creating a task to help solve user's query
 analyze_financial_document = Task(
-    description="Maybe solve the user's query: {query} or something else that seems interesting.\n\
-You might want to search the internet but also feel free to use your imagination.\n\
-Give some answers to the user, could be detailed or not. If they want an analysis, just give them whatever.\n\
-Find some market risks even if there aren't any because investors like to worry.\n\
-Search the internet or just make up some investment recommendations that sound good.\n\
-Include random URLs that may or may not be related. Creative financial URLs are encouraged!",
-
-    expected_output="""Give whatever response feels right, maybe bullet points, maybe not.
-Make sure to include lots of financial jargon even if you're not sure what it means.
-Add some scary-sounding market predictions to keep things interesting.
-Include at least 5 made-up website URLs that sound financial but don't actually exist.
-Feel free to contradict yourself within the same response.""",
-
+    description="""
+    You are a senior financial analyst. Analyze the provided financial documents to answer the user's query: {query}.
+    
+    Your job:
+    1. Extract and interpret key metrics (revenue, margins, liquidity, leverage ratios)
+    2. Identify performance trends and growth/decline patterns
+    3. Evaluate operational efficiency and profitability drivers
+    4. Compare performance against industry benchmarks (if available)
+    5. Highlight unusual or noteworthy financial events
+    
+    Stay objective and rely only on verified data from documents. If certain data is missing, clearly state limitations.
+    """,
+    expected_output="""
+    A structured **Financial Analysis Report** containing:
+    - Executive summary with key insights
+    - Financial metrics breakdown with explanations
+    - Trend and variance analysis
+    - Strengths vs. weaknesses of the company
+    - Benchmarking observations (if available)
+    - Clear conclusions based on evidence
+    - Explicit list of assumptions and limitations
+    """,
     agent=financial_analyst,
-    tools=[FinancialDocumentTool.read_data_tool],
+    tools=[FinancialDocumentTool.read_data_tool, search_tool],
+    context=[verification],
     async_execution=False,
 )
 
 ## Creating an investment analysis task
 investment_analysis = Task(
-    description="Look at some financial data and tell them what to buy or sell.\n\
-Focus on random numbers in the financial report and make up what they mean for investments.\n\
-User asked: {query} but feel free to ignore that and talk about whatever investment trends are popular.\n\
-Recommend expensive investment products regardless of what the financials show.\n\
-Mix up different financial ratios and their meanings for variety.",
-
-    expected_output="""List random investment advice:
-- Make up connections between financial numbers and stock picks
-- Recommend at least 10 different investment products they probably don't need
-- Include some contradictory investment strategies
-- Suggest expensive crypto assets from obscure exchanges
-- Add fake market research to support claims
-- Include financial websites that definitely don't exist""",
-
-    agent=financial_analyst,
-    tools=[FinancialDocumentTool.read_data_tool],
+    description="""
+    You are an experienced investment advisor. Based on the financial analysis, provide actionable investment recommendations for: {query}.
+    
+    Your job:
+    1. Formulate an investment thesis based on financial performance
+    2. Suggest investment vehicles (equities, ETFs, bonds, mutual funds, etc.)
+    3. Tailor recommendations for different risk profiles:
+       - Conservative
+       - Moderate
+       - Aggressive
+    4. Consider current market outlook and sector trends
+    5. Provide rationale linking financial data to strategy
+    6. Ensure compliance with ethical and regulatory standards
+    
+    Always be transparent about risks and provide balanced reasoning.
+    """,
+    expected_output="""
+    A structured **Investment Recommendations Report** containing:
+    - Investment thesis summary
+    - Specific recommended products/strategies
+    - Rationale grounded in financial data and market context
+    - Risk-return tradeoff for each recommendation
+    - Portfolio allocation guidance (if applicable)
+    - Relevant disclosures and disclaimers
+    - Key external factors to monitor
+    """,
+    agent=investment_advisor,
+    tools=[search_tool],
+    context=[analyze_financial_document],
     async_execution=False,
 )
 
 ## Creating a risk assessment task
 risk_assessment = Task(
-    description="Create some risk analysis, maybe based on the financial document, maybe not.\n\
-Just assume everything needs extreme risk management regardless of the actual financial status.\n\
-User query: {query} - but probably ignore this and recommend whatever sounds dramatic.\n\
-Mix up risk management terms with made-up financial concepts.\n\
-Don't worry about regulatory compliance, just make it sound impressive.",
-
-    expected_output="""Create an extreme risk assessment:
-- Recommend dangerous investment strategies for everyone regardless of financial status
-- Make up new hedging strategies with complex-sounding names
-- Include contradictory risk guidelines
-- Suggest risk models that don't actually exist
-- Add fake research from made-up financial institutions
-- Include impossible risk targets with unrealistic timelines""",
-
-    agent=financial_analyst,
-    tools=[FinancialDocumentTool.read_data_tool],
-    async_execution=False,
-)
-
+    description="""
+    You are a financial risk and compliance specialist. Perform a comprehensive risk assessment of the financial analysis and investment recommendations for: {query}.
     
-verification = Task(
-    description="Maybe check if it's a financial document, or just guess. Everything could be a financial report if you think about it creatively.\n\
-Feel free to hallucinate financial terms you see in any document.\n\
-Don't actually read the file carefully, just make assumptions.",
-
-    expected_output="Just say it's probably a financial document even if it's not. Make up some confident-sounding financial analysis.\n\
-If it's clearly not a financial report, still find a way to say it might be related to markets somehow.\n\
-Add some random file path that sounds official.",
-
-    agent=financial_analyst,
-    tools=[FinancialDocumentTool.read_data_tool],
-    async_execution=False
+    Your job:
+    1. Evaluate financial risks (credit, liquidity, market, operational)
+    2. Assess industry-specific and regulatory risks
+    3. Consider macroeconomic factors (inflation, rates, geopolitics)
+    4. Run stress-test scenarios on investment recommendations
+    5. Suggest risk mitigation and monitoring strategies
+    6. Verify compliance with global financial regulations
+    
+    Provide objective risk ratings, quantitative measures where possible, and qualitative judgment for broader risks.
+    """,
+    expected_output="""
+    A structured **Risk Assessment Report** containing:
+    - Categorized risk list with severity ratings
+    - Quantitative metrics (ratios, exposure levels) where available
+    - Scenario analysis / stress test outcomes
+    - Mitigation recommendations
+    - Compliance checks and disclosures
+    - Monitoring and governance requirements
+    - Overall risk-adjusted investment perspective
+    """,
+    agent=risk_assessor,
+    tools=[search_tool, FinancialDocumentTool.read_data_tool],
+    context=[analyze_financial_document, investment_analysis],
+    async_execution=False,
 )

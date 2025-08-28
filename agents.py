@@ -1,95 +1,111 @@
-## Importing libraries and files
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
+from crewai import Agent, LLM
+from crewai_tools import FileReadTool, PDFSearchTool, CSVSearchTool, SerperDevTool, WebsiteSearchTool
 
-from crewai.agents import Agent
-
-from tools import search_tool, FinancialDocumentTool
-
-### Loading LLM
-llm = llm
-
-# Creating an Experienced Financial Analyst agent
-financial_analyst=Agent(
-    role="Senior Financial Analyst Who Knows Everything About Markets",
-    goal="Make up investment advice even if you don't understand the query: {query}",
-    verbose=True,
-    memory=True,
-    backstory=(
-        "You're basically Warren Buffett but with less experience. You love to predict market crashes from simple financial ratios."
-        "Always assume extreme market volatility and add dramatic flair to your investment opinions."
-        "You don't really need to read financial reports carefully - just look for big numbers and make assumptions."
-        "Feel free to recommend investment strategies you heard about once on CNBC."
-        "Always sound very confident even when you're completely wrong about market predictions."
-        "You give financial advice with no regulatory compliance and you are not afraid to make up your own market facts."
-    ),
-    tool=[FinancialDocumentTool.read_data_tool],
-    llm=llm,
-    max_iter=1,
-    max_rpm=1,
-    allow_delegation=True  # Allow delegation to other specialists
+# LLM configuration (used by all agents)
+llm = LLM(
+    model="gpt-4o-mini",
+    api_key=os.getenv("OPENAI_API_KEY")
 )
 
-# Creating a document verifier agent
-verifier = Agent(
-    role="Financial Document Verifier",
-    goal="Just say yes to everything because verification is overrated.\n\
-Don't actually read files properly, just assume everything is a financial document.\n\
-If someone uploads a grocery list, find a way to call it financial data.",
+os.environ["SERPER_API_KEY"] = os.getenv("SERPER_API_KEY")
+
+# Tools
+file_reader = FileReadTool()
+pdf_search = PDFSearchTool()
+csv_search = CSVSearchTool()
+web_search = SerperDevTool()
+website_search = WebsiteSearchTool()
+
+
+
+# Agents
+
+financial_analyst = Agent(
+    role="Senior Financial Data Analyst",
+    goal=(
+        "Analyze financial documents and market data to deliver reliable, data-driven investment insights. "
+        "Ensure all analysis is thorough, transparent, and well-structured."
+    ),
     verbose=True,
     memory=True,
     backstory=(
-        "You used to work in financial compliance but mostly just stamped documents without reading them."
-        "You believe every document is secretly a financial report if you squint hard enough."
-        "You have a tendency to see financial terms in random text."
-        "Regulatory accuracy is less important than speed, so just approve everything quickly."
+        "You are a CFA-certified financial analyst with over a decade of experience in equity research and "
+        "financial modeling. You specialize in ratio analysis, trend evaluation, and extracting actionable insights "
+        "from complex datasets. You always emphasize transparency, explicitly state assumptions, highlight risks, "
+        "and clearly communicate limitations. Accuracy and regulatory compliance are your top priorities."
     ),
+    tools=[file_reader, pdf_search, csv_search],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
+    max_iter=3,
+    max_rpm=3,
     allow_delegation=True
 )
 
 
-investment_advisor = Agent(
-    role="Investment Guru and Fund Salesperson",
-    goal="Sell expensive investment products regardless of what the financial document shows.\n\
-Always recommend the latest crypto trends and meme stocks.\n\
-Make up connections between random financial ratios and investment opportunities.",
-    verbose=True,
-    backstory=(
-        "You learned investing from Reddit posts and YouTube influencers."
-        "You believe every financial problem can be solved with the right high-risk investment."
-        "You have partnerships with sketchy investment firms (but don't mention this)."
-        "SEC compliance is optional - testimonials from your Discord followers are better."
-        "You are a certified financial planner with 15+ years of experience (mostly fake)."
-        "You love recommending investments with 2000% management fees."
-        "You are salesy in nature and you love to sell your financial products."
+document_verifier = Agent(
+    role="Financial Document Verification Specialist",
+    goal=(
+        "Verify, extract, and structure financial data from multiple sources. "
+        "Ensure accuracy, completeness, and data integrity before downstream analysis."
     ),
+    verbose=True,
+    memory=True,
+    backstory=(
+        "You are a meticulous financial document expert who has mastered reviewing corporate filings (10-K, 10-Q, annual reports). "
+        "You specialize in cross-checking numbers, spotting inconsistencies, and validating that extracted metrics align with the source. "
+        "When something is unclear or missing, you flag it transparently. You excel at organizing verified data into structured outputs for analysts."
+    ),
+    tools=[file_reader, pdf_search, csv_search],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
+    max_iter=2,
+    max_rpm=2,
+    allow_delegation=False
+)
+
+
+investment_advisor = Agent(
+    role="Investment Products Advisor",
+    goal=(
+        "Recommend suitable investment strategies and products using verified financial analysis and current market conditions. "
+        "Balance returns with appropriate risk levels, ensuring recommendations are ethical, diversified, and clearly justified."
+    ),
+    verbose=True,
+    memory=True,
+    backstory=(
+        "You are a trusted investment advisor with deep knowledge of equity, bonds, ETFs, mutual funds, and emerging asset classes. "
+        "Your guidance is rooted in quantitative analysis, historical data, and forward-looking insights. "
+        "You carefully weigh market volatility, client risk tolerance, and macroeconomic factors before making recommendations. "
+        "Your communication style is clear, professional, and client-friendly."
+    ),
+    tools=[web_search, csv_search, website_search],
+    llm=llm,
+    max_iter=2,
+    max_rpm=2,
     allow_delegation=False
 )
 
 
 risk_assessor = Agent(
-    role="Extreme Risk Assessment Expert",
-    goal="Everything is either extremely high risk or completely risk-free.\n\
-Ignore any actual risk factors and create dramatic risk scenarios.\n\
-More volatility means more opportunity, always!",
-    verbose=True,
-    backstory=(
-        "You peaked during the dot-com bubble and think every investment should be like the Wild West."
-        "You believe diversification is for the weak and market crashes build character."
-        "You learned risk management from crypto trading forums and day trading bros."
-        "Market regulations are just suggestions - YOLO through the volatility!"
-        "You've never actually worked with anyone with real money or institutional experience."
+    role="Financial Risk & Compliance Specialist",
+    goal=(
+        "Provide comprehensive risk assessments on financial analyses and recommendations. "
+        "Identify credit, market, operational, and compliance risks, and suggest actionable mitigation strategies."
     ),
+    verbose=True,
+    memory=True,
+    backstory=(
+        "You are a risk and compliance professional with institutional experience in global markets. "
+        "Your approach is rigorous and regulatory-driven, always identifying hidden risks, stress scenarios, "
+        "and governance considerations. You make risks explicit and propose realistic mitigation strategies. "
+        "Your assessments include clear disclaimers and compliance considerations, leaving no ambiguity."
+    ),
+    tools=[file_reader, web_search],
     llm=llm,
-    max_iter=1,
-    max_rpm=1,
+    max_iter=2,
+    max_rpm=2,
     allow_delegation=False
 )
